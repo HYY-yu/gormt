@@ -36,67 +36,10 @@ type _BaseMgr struct {
 	isRelated bool
 }
 
-// WithContext set context to db
-func (obj *_BaseMgr) WithContext(c context.Context) {
-	if obj.DB != nil {
-		obj.DB = obj.DB.WithContext(c)
-	}
-}
-
-func (obj *_BaseMgr) WithSelects(idName string, selects ...string) {
-	if len(selects) > 0 {
-		if len(idName) > 0 {
-			selects = append(selects, idName)
-		}
-		// 对Select进行去重
-		selectMap := make(map[string]int, len(selects))
-		for _, e := range selects {
-			if _, ok := selectMap[e]; !ok {
-				selectMap[e] = 1
-			}
-		}
-
-		newSelects := make([]string, 0, len(selects))
-		for k, _ := range selectMap {
-			newSelects = append(newSelects, k)
-		}
-
-		obj.DB = obj.DB.Select(newSelects)
-	}
-}
-
-func (obj *_BaseMgr) WithOmit(omit ...string) {
-	if len(omit) > 0 {
-		obj.DB = obj.DB.Omit(omit...)
-	}
-}
-
-func (obj *_BaseMgr) WithOptions(opts ...Option) {
-	options := options{
-		query: make(map[string]interface{}, len(opts)),
-	}
-	for _, o := range opts {
-		o.apply(&options)
-	}
-	obj.DB = obj.DB.Where(options.query)
-}
-
 // SetTimeOut set timeout
 func (obj *_BaseMgr) SetTimeOut(timeout time.Duration) {
-	obj.ctx, obj.cancel = context.WithTimeout(context.Background(), timeout)
+	obj.ctx, obj.cancel = context.WithTimeout(obj.ctx, timeout)
 	obj.timeout = timeout
-}
-
-// SetCtx set context
-func (obj *_BaseMgr) SetCtx(c context.Context) {
-	if c != nil {
-		obj.ctx = c
-	}
-}
-
-// GetCtx get context
-func (obj *_BaseMgr) GetCtx() context.Context {
-	return obj.ctx
 }
 
 // Cancel cancel context
@@ -125,12 +68,12 @@ func (obj *_BaseMgr) SetIsRelated(b bool) {
 }
 
 // New new gorm.新gorm,重置条件
-func (obj *_BaseMgr) New() {
-	obj.DB = obj.NewDB()
+func (obj *_BaseMgr) new() {
+	obj.DB = obj.newDB()
 }
 
 // NewDB new gorm.新gorm
-func (obj *_BaseMgr) NewDB() *gorm.DB {
+func (obj *_BaseMgr) newDB() *gorm.DB {
 	return obj.DB.Session(&gorm.Session{NewDB: true, Context: obj.ctx})
 }
 
@@ -149,7 +92,6 @@ func (f optionFunc) apply(o *options) {
 	f(o)
 }
 
-
 // OpenRelated 打开全局预加载
 func OpenRelated() {
 	globalIsRelated = true
@@ -165,23 +107,24 @@ func CloseRelated() {
 type CheckWhere func(v interface{}) bool
 type DoWhere func(*gorm.DB, interface{}) *gorm.DB
 
+// AddWhere
 // CheckWhere 函数 如果返回true，则表明 DoWhere 的查询条件需要加到sql中去
-func (w *_BaseMgr) AddWhere(v interface{}, c CheckWhere, d DoWhere) *_BaseMgr {
+func (obj *_BaseMgr) addWhere(v interface{}, c CheckWhere, d DoWhere) *_BaseMgr {
 	if c(v) {
-		w.DB = d(w.DB, v)
+		obj.DB = d(obj.DB, v)
 	}
-	return w
+	return obj
 }
 
-func (w *_BaseMgr) Sort(userSort, defaultSort string) *_BaseMgr {
+func (obj *_BaseMgr) sort(userSort, defaultSort string) *_BaseMgr {
 	if len(userSort) > 0 {
-		w.DB = w.DB.Order(userSort)
+		obj.DB = obj.DB.Order(userSort)
 	} else {
 		if len(defaultSort) > 0 {
-			w.DB = w.DB.Order(defaultSort)
+			obj.DB = obj.DB.Order(defaultSort)
 		}
 	}
-	return w
+	return obj
 }
 
 	`
@@ -198,6 +141,56 @@ func {{$obj.StructName}}Mgr(db *gorm.DB) *_{{$obj.StructName}}Mgr {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &_{{$obj.StructName}}Mgr{_BaseMgr: &_BaseMgr{DB: db.Table("{{GetTablePrefixName $obj.TableName}}"), isRelated: globalIsRelated,ctx:ctx,cancel:cancel,timeout:-1}}
+}
+
+
+// WithContext set context to db
+func (obj *_{{$obj.StructName}}Mgr) WithContext(c context.Context) *_{{$obj.StructName}}Mgr {
+	if c != nil {
+		obj.ctx = c
+	}
+	return obj
+}
+
+func (obj *_{{$obj.StructName}}Mgr) WithSelects(idName string, selects ...string) *_{{$obj.StructName}}Mgr {
+	if len(selects) > 0 {
+		if len(idName) > 0 {
+			selects = append(selects, idName)
+		}
+		// 对Select进行去重
+		selectMap := make(map[string]int, len(selects))
+		for _, e := range selects {
+			if _, ok := selectMap[e]; !ok {
+				selectMap[e] = 1
+			}
+		}
+
+		newSelects := make([]string, 0, len(selects))
+		for k, _ := range selectMap {
+			newSelects = append(newSelects, k)
+		}
+
+		obj.DB = obj.DB.Select(newSelects)
+	}
+	return obj
+}
+
+func (obj *_{{$obj.StructName}}Mgr) WithOmit(omit ...string) *_{{$obj.StructName}}Mgr {
+	if len(omit) > 0 {
+		obj.DB = obj.DB.Omit(omit...)
+	}
+	return obj
+}
+
+func (obj *_{{$obj.StructName}}Mgr) WithOptions(opts ...Option) *_{{$obj.StructName}}Mgr {
+	options := options{
+		query: make(map[string]interface{}, len(opts)),
+	}
+	for _, o := range opts {
+		o.apply(&options)
+	}
+	obj.DB = obj.DB.Where(options.query)
+	return obj
 }
 
 // GetTableName get sql table name.获取数据库名字
@@ -270,8 +263,8 @@ func (obj *_{{$obj.StructName}}Mgr) Update{{$obj.StructName}}(bean *{{$obj.Struc
 	return
 }
 
-func (obj *_{{$obj.StructName}}Mgr) Delete{{$obj.StructName}}() (err error) {
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Error
+func (obj *_{{$obj.StructName}}Mgr) Delete{{$obj.StructName}}(bean *{{$obj.StructName}}) (err error) {
+	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Delete(bean).Error
 
 	return
 }
