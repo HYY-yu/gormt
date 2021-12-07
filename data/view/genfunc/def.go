@@ -200,7 +200,7 @@ func (obj *_{{$obj.StructName}}Mgr) GetTableName() string {
 
 // Reset 重置gorm会话
 func (obj *_{{$obj.StructName}}Mgr) Reset() *_{{$obj.StructName}}Mgr {
-	obj.New()
+	obj.new()
 	return obj
 }
 
