@@ -172,7 +172,7 @@ func (obj *_{{$obj.StructName}}Mgr) WithSelects(idName string, selects ...string
 
 		newSelects := make([]string, 0, len(selects))
 		for k := range selectMap {
-			if len(selectMap) > 0 {
+			if len(k) > 0 {
 				newSelects = append(newSelects, k)
 			}
 		}
