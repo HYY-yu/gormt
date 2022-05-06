@@ -225,6 +225,15 @@ func (obj *_{{$obj.StructName}}Mgr) Count(count *int64) (tx *gorm.DB) {
 	return obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Count(count)
 }
 
+func (obj *_{{$obj.StructName}}Mgr) HasRecord() (bool, error) {
+	var count int64
+	err := obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count != 0, nil
+}
+
 {{range $oem := $obj.Em}}
 // With{{$oem.ColStructName}} {{$oem.ColName}}获取 {{$oem.Notes}}
 func (obj *_{{$obj.StructName}}Mgr) With{{$oem.ColStructName}}({{CapLowercase $oem.ColStructName}} {{$oem.Type}}) Option {
