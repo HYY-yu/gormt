@@ -137,21 +137,12 @@ type _{{$obj.StructName}}Mgr struct {
 }
 
 // {{$obj.StructName}}Mgr open func
-func {{$obj.StructName}}Mgr(db *gorm.DB) *_{{$obj.StructName}}Mgr {
+func {{$obj.StructName}}Mgr(ctx context.Context, db *gorm.DB) *_{{$obj.StructName}}Mgr {
 	if db == nil {
 		panic(fmt.Errorf("{{$obj.StructName}}Mgr need init by db"))
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	return &_{{$obj.StructName}}Mgr{_BaseMgr: &_BaseMgr{DB: db.Table("{{GetTablePrefixName $obj.TableName}}"), isRelated: globalIsRelated,ctx:ctx,cancel:cancel,timeout:-1}}
-}
-
-
-// WithContext set context to db
-func (obj *_{{$obj.StructName}}Mgr) WithContext(c context.Context) *_{{$obj.StructName}}Mgr {
-	if c != nil {
-		obj.ctx = c
-	}
-	return obj
 }
 
 func (obj *_{{$obj.StructName}}Mgr) WithSelects(idName string, selects ...string) *_{{$obj.StructName}}Mgr {
