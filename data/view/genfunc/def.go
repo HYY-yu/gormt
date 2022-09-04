@@ -78,7 +78,12 @@ func (obj *_BaseMgr) newDB() *gorm.DB {
 }
 
 type options struct {
-	query map[string]interface{}
+	query map[string]queryData
+}
+
+type queryData struct {
+	data interface{}
+	cond string
 }
 
 // Option overrides behavior of Connect.
@@ -103,18 +108,6 @@ func CloseRelated() {
 }
 
 // -------- sql where helper ----------
-
-type CheckWhere func(v interface{}) bool
-type DoWhere func(*gorm.DB, interface{}) *gorm.DB
-
-// AddWhere
-// CheckWhere 函数 如果返回true，则表明 DoWhere 的查询条件需要加到sql中去
-func (obj *_BaseMgr) addWhere(v interface{}, c CheckWhere, d DoWhere) *_BaseMgr {
-	if c(v) {
-		obj.DB = d(obj.DB, v)
-	}
-	return obj
-}
 
 func (obj *_BaseMgr) sort(userSort, defaultSort string) *_BaseMgr {
 	if len(userSort) > 0 {
@@ -178,12 +171,14 @@ func (obj *_{{$obj.StructName}}Mgr) WithOmit(omit ...string) *_{{$obj.StructName
 
 func (obj *_{{$obj.StructName}}Mgr) WithOptions(opts ...Option) *_{{$obj.StructName}}Mgr {
 	options := options{
-		query: make(map[string]interface{}, len(opts)),
+		query: make(map[string]queryData, len(opts)),
 	}
 	for _, o := range opts {
 		o.apply(&options)
 	}
-	obj.DB = obj.DB.Where(options.query)
+	for k, v := range options.query {
+		obj.DB = obj.DB.Where(k+" "+v.cond, v.data)
+	}
 	return obj
 }
 
@@ -227,32 +222,18 @@ func (obj *_{{$obj.StructName}}Mgr) HasRecord() (bool, error) {
 
 {{range $oem := $obj.Em}}
 // With{{$oem.ColStructName}} {{$oem.ColName}}获取 {{$oem.Notes}}
-func (obj *_{{$obj.StructName}}Mgr) With{{$oem.ColStructName}}({{CapLowercase $oem.ColStructName}} {{$oem.Type}}) Option {
-	return optionFunc(func(o *options) { o.query["{{$oem.ColName}}"] = {{CapLowercase $oem.ColStructName}} })
+func (obj *_{{$obj.StructName}}Mgr) With{{$oem.ColStructName}}({{CapLowercase $oem.ColStructName}} {{$oem.Type}}, cond ...string) Option {
+	return optionFunc(func(o *options) {
+		if len(cond) == 0 {
+			cond = []string{" = ? "}
+		}
+		o.query["{{$oem.ColName}}"] = queryData{
+			cond: cond[0],
+			data: {{CapLowercase $oem.ColStructName}},
+		}
+	})
 }
 {{end}}
-
-{{range $oem := $obj.Em}}
-// GetFrom{{$oem.ColStructName}} 通过{{$oem.ColName}}获取内容 {{$oem.Notes}} {{if $oem.IsMulti}}
-func (obj *_{{$obj.StructName}}Mgr) GetFrom{{$oem.ColStructName}}({{CapLowercase $oem.ColStructName}} {{$oem.Type}}) (results []*{{$obj.StructName}}, err error) {
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Where("{{$oem.ColNameEx}} = ?", {{CapLowercase $oem.ColStructName}}).Find(&results).Error
-	{{GenPreloadList $obj.PreloadList true}}
-	return
-}
-{{else}}
-func (obj *_{{$obj.StructName}}Mgr)  GetFrom{{$oem.ColStructName}}({{CapLowercase $oem.ColStructName}} {{$oem.Type}}) (result {{$obj.StructName}}, err error) {
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Where("{{$oem.ColNameEx}} = ?", {{CapLowercase $oem.ColStructName}}).Find(&result).Error
-	{{GenPreloadList $obj.PreloadList false}}
-	return
-}
-{{end}}
-// GetBatchFrom{{$oem.ColStructName}} 批量查找 {{$oem.Notes}}
-func (obj *_{{$obj.StructName}}Mgr) GetBatchFrom{{$oem.ColStructName}}({{CapLowercase $oem.ColStructName}}s []{{$oem.Type}}) (results []*{{$obj.StructName}}, err error) {
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Where("{{$oem.ColNameEx}} IN (?)", {{CapLowercase $oem.ColStructName}}s).Find(&results).Error
-	{{GenPreloadList $obj.PreloadList true}}
-	return
-}
- {{end}}
 
 func (obj *_{{$obj.StructName}}Mgr) Create{{$obj.StructName}}(bean *{{$obj.StructName}}) (err error) {
 	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Create(bean).Error
