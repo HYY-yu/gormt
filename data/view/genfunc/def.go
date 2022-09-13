@@ -20,7 +20,6 @@ var {{.StructName}}Columns = struct { {{range $em := .Em}}
 package {{.PackageName}}
 import (
 	"context"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -71,7 +70,7 @@ func (obj *_BaseMgr) newDB() *gorm.DB {
 }
 
 // 开启语句 PrepareStmt 功能
-fund (obj *_BaseMgr) WithPrepareStmt() *gorm.DB{
+func (obj *_BaseMgr) WithPrepareStmt() *gorm.DB{
 	return obj.DB.Session(&gorm.Session{PrepareStmt: true})
 }
 
