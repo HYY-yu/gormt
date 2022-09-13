@@ -32,14 +32,7 @@ type _BaseMgr struct {
 	*gorm.DB
 	ctx       context.Context
 	cancel    context.CancelFunc
-	timeout   time.Duration
 	isRelated bool
-}
-
-// SetTimeOut set timeout
-func (obj *_BaseMgr) SetTimeOut(timeout time.Duration) {
-	obj.ctx, obj.cancel = context.WithTimeout(obj.ctx, timeout)
-	obj.timeout = timeout
 }
 
 // Cancel cancel context
@@ -75,6 +68,11 @@ func (obj *_BaseMgr) new() {
 // NewDB new gorm.新gorm
 func (obj *_BaseMgr) newDB() *gorm.DB {
 	return obj.DB.Session(&gorm.Session{NewDB: true, Context: obj.ctx})
+}
+
+// 开启语句 PrepareStmt 功能
+fund (obj *_BaseMgr) WithPrepareStmt() *gorm.DB{
+	return obj.DB.Session(&gorm.Session{PrepareStmt: true})
 }
 
 type options struct {
@@ -135,7 +133,7 @@ func {{$obj.StructName}}Mgr(ctx context.Context, db *gorm.DB) *_{{$obj.StructNam
 		panic(fmt.Errorf("{{$obj.StructName}}Mgr need init by db"))
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	return &_{{$obj.StructName}}Mgr{_BaseMgr: &_BaseMgr{DB: db.Table("{{GetTablePrefixName $obj.TableName}}"), isRelated: globalIsRelated,ctx:ctx,cancel:cancel,timeout:-1}}
+	return &_{{$obj.StructName}}Mgr{_BaseMgr: &_BaseMgr{DB: db.Table("{{GetTablePrefixName $obj.TableName}}").WithContext(ctx), isRelated: globalIsRelated,ctx:ctx,cancel:cancel}}
 }
 
 func (obj *_{{$obj.StructName}}Mgr) WithSelects(idName string, selects ...string) *_{{$obj.StructName}}Mgr {
@@ -158,13 +156,6 @@ func (obj *_{{$obj.StructName}}Mgr) WithSelects(idName string, selects ...string
 			}
 		}
 		obj.DB = obj.DB.Select(newSelects)
-	}
-	return obj
-}
-
-func (obj *_{{$obj.StructName}}Mgr) WithOmit(omit ...string) *_{{$obj.StructName}}Mgr {
-	if len(omit) > 0 {
-		obj.DB = obj.DB.Omit(omit...)
 	}
 	return obj
 }
@@ -195,25 +186,25 @@ func (obj *_{{$obj.StructName}}Mgr) Reset() *_{{$obj.StructName}}Mgr {
 
 // Get 获取 
 func (obj *_{{$obj.StructName}}Mgr) Get() (result {{$obj.StructName}}, err error) {
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Find(&result).Error
+	err = obj.DB.Find(&result).Error
 	{{GenPreloadList $obj.PreloadList false}}
 	return
 }
 
 // Gets 获取批量结果
-func (obj *_{{$obj.StructName}}Mgr) Gets() (results []*{{$obj.StructName}}, err error) {
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Find(&results).Error
+func (obj *_{{$obj.StructName}}Mgr) Gets() (results []{{$obj.StructName}}, err error) {
+	err = obj.DB.Find(&results).Error
 	{{GenPreloadList $obj.PreloadList true}}
 	return
 }
 
 func (obj *_{{$obj.StructName}}Mgr) Count(count *int64) (tx *gorm.DB) {
-	return obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Count(count)
+	return obj.DB.Count(count)
 }
 
 func (obj *_{{$obj.StructName}}Mgr) HasRecord() (bool, error) {
 	var count int64
-	err := obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Count(&count).Error
+	err := obj.DB.Count(&count).Error
 	if err != nil {
 		return false, err
 	}
@@ -236,19 +227,19 @@ func (obj *_{{$obj.StructName}}Mgr) With{{$oem.ColStructName}}({{CapLowercase $o
 {{end}}
 
 func (obj *_{{$obj.StructName}}Mgr) Create{{$obj.StructName}}(bean *{{$obj.StructName}}) (err error) {
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Create(bean).Error
+	err = obj.DB.Create(bean).Error
 
 	return
 }
 
 func (obj *_{{$obj.StructName}}Mgr) Update{{$obj.StructName}}(bean *{{$obj.StructName}}) (err error) {
-	err = obj.DB.WithContext(obj.ctx).Model(bean).Updates(bean).Error
+	err = obj.DB.Updates(bean).Error
 
 	return
 }
 
 func (obj *_{{$obj.StructName}}Mgr) Delete{{$obj.StructName}}(bean *{{$obj.StructName}}) (err error) {
-	err = obj.DB.WithContext(obj.ctx).Model({{$obj.StructName}}{}).Delete(bean).Error
+	err = obj.DB.Delete(bean).Error
 
 	return
 }
