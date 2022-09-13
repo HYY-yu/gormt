@@ -159,7 +159,7 @@ func (obj *_{{$obj.StructName}}Mgr) WithSelects(idName string, selects ...string
 	return obj
 }
 
-func (obj *_{{$obj.StructName}}Mgr) WithOptions(opts ...Option) *_ProjectMgr {
+func (obj *_{{$obj.StructName}}Mgr) WithOptions(opts ...Option) *_{{$obj.StructName}}Mgr {
 	options := options{
 		query: make(map[string]queryData, len(opts)),
 	}
