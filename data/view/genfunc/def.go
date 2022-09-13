@@ -159,7 +159,7 @@ func (obj *_{{$obj.StructName}}Mgr) WithSelects(idName string, selects ...string
 	return obj
 }
 
-func (obj *_{{$obj.StructName}}Mgr) WithOptions(opts ...Option) *_{{$obj.StructName}}Mgr {
+func (obj *_ProjectMgr) WithOptions(opts ...Option) *_ProjectMgr {
 	options := options{
 		query: make(map[string]queryData, len(opts)),
 	}
@@ -167,7 +167,11 @@ func (obj *_{{$obj.StructName}}Mgr) WithOptions(opts ...Option) *_{{$obj.StructN
 		o.apply(&options)
 	}
 	for k, v := range options.query {
-		obj.DB = obj.DB.Where(k+" "+v.cond, v.data)
+		if v.data == nil {
+			obj.DB = obj.DB.Where(k + " " + v.cond)
+		} else {
+			obj.DB = obj.DB.Where(k+" "+v.cond, v.data)
+		}
 	}
 	return obj
 }
@@ -212,7 +216,7 @@ func (obj *_{{$obj.StructName}}Mgr) HasRecord() (bool, error) {
 
 {{range $oem := $obj.Em}}
 // With{{$oem.ColStructName}} {{$oem.ColName}}获取 {{$oem.Notes}}
-func (obj *_{{$obj.StructName}}Mgr) With{{$oem.ColStructName}}({{CapLowercase $oem.ColStructName}} {{$oem.Type}}, cond ...string) Option {
+func (obj *_{{$obj.StructName}}Mgr) With{{$oem.ColStructName}}({{CapLowercase $oem.ColStructName}} interface{}, cond ...string) Option {
 	return optionFunc(func(o *options) {
 		if len(cond) == 0 {
 			cond = []string{" = ? "}
