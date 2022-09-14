@@ -201,6 +201,13 @@ func (obj *_{{$obj.StructName}}Mgr) Gets() (results []{{$obj.StructName}}, err e
 	return
 }
 
+// Take 必须获取结果（单条）
+func(obj *_{{$obj.StructName}}Mgr) Catch() (results {{$obj.StructName}}, err error) {
+	err = obj.DB.Take(&results).Error
+	{{GenPreloadList $obj.PreloadList true}}
+	return
+}
+
 func (obj *_{{$obj.StructName}}Mgr) Count(count *int64) (tx *gorm.DB) {
 	return obj.DB.Count(count)
 }
