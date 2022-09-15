@@ -176,9 +176,15 @@ func (obj *_{{$obj.StructName}}Mgr) WithOptions(opts ...Option) *_{{$obj.StructN
 	return obj
 }
 
-// GetTableName get sql table name.获取数据库名字
+// GetTableName get sql table name.获取表名字
 func (obj *_{{$obj.StructName}}Mgr) GetTableName() string {
 	return "{{GetTablePrefixName $obj.TableName}}"
+}
+
+// Tx 开启事务会话
+func (obj *_{{$obj.StructName}}Mgr) Tx(db *gorm.DB) *_{{$obj.StructName}}Mgr {
+	obj.UpdateDB(db.Table(obj.GetTableName()).WithContext(obj.ctx))
+	return obj
 }
 
 // Reset 重置gorm会话
