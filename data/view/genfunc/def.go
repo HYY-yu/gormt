@@ -168,7 +168,7 @@ func (obj *_{{$obj.StructName}}Mgr) GetTableName() string {
 }
 
 // Tx 开启事务会话
-func (obj *_{{$obj.StructName}}Mgr) Tx(tx *gorm.DB) *_ConfigMgr {
+func (obj *_{{$obj.StructName}}Mgr) Tx(tx *gorm.DB) *_{{$obj.StructName}}Mgr {
 	obj.DB = tx.Table(obj.GetTableName()).WithContext(obj.ctx)
 	return obj
 }
